@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from social.models import Post, Likes
+from social.models import Post, Likes, PostImage
+
+
+class ImagesPostInline(admin.TabularInline):
+    model = PostImage
+    fields = ("image", "uploaded_at")
+    readonly_fields = ("uploaded_at",)
 
 
 class LikesInline(admin.TabularInline):
@@ -12,8 +18,8 @@ class LikesInline(admin.TabularInline):
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ("text", "image",)
-    inlines = [LikesInline]
+    list_display = ("text",)
+    inlines = [LikesInline, ImagesPostInline]
 
 
 admin.site.register(Likes)
