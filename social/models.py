@@ -10,10 +10,15 @@ class PostImage(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
 
+class Tags(models.Model):
+    tag_name = models.CharField(max_length=50, unique=True)
+
+
 class Post(models.Model):
     text = models.TextField(max_length=500)
     owner = models.ForeignKey(get_user_model(), models.CASCADE, related_name="owner_post")
     date_posted = models.DateTimeField(auto_now_add=True)
+    tags = models.ManyToManyField(Tags, related_name="tag_post")
 
 
 class Likes(models.Model):
