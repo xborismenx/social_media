@@ -1,12 +1,12 @@
 from rest_framework import serializers
 
-from social.models import Post, Likes, PostImage
+from social.models import Post, Likes, PostImage, Tags
 
 
 class ImagePostSerializer(serializers.ModelSerializer):
     class Meta:
         model = PostImage
-        fields = ("post", "image", "uploaded_at")
+        fields = ("image", "uploaded_at")
 
 
 class LikesSerializer(serializers.ModelSerializer):
@@ -17,16 +17,60 @@ class LikesSerializer(serializers.ModelSerializer):
         fields = ('user', 'liked_at')
 
 
-class PostSerializer(serializers.ModelSerializer):
-    images = ImagePostSerializer(many=True, read_only=True)
+class TagsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tags
+        fields = ("name",)
+
+
+class PostListSerializer(serializers.ModelSerializer):
+    images = serializers.SerializerMethodField()
     owner = serializers.ReadOnlyField(source="owner.username")
-    likes = LikesSerializer(source="post_likes", many=True)
+    likes = serializers.SerializerMethodField(source="likes")
+    tags = serializers.SlugRelatedField(many=True, queryset=Tags.objects.all(), slug_field="name")
+    is_liked = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
-        fields = ("id", "text", "images", "owner", "likes", "date_posted")
+        fields = ("id", "text", "images", "likes", "tags", "date_posted", "owner", "is_liked")
+
+    def get_images(self, obj):
+        request = self.context.get("request")
+        return [request.build_absolute_uri(image.image.url) for image in obj.images.all()]
+
+    def get_likes(self, obj):
+        return obj.post_likes.count()
+
+    def get_is_liked(self, obj):
+        user = self.context["request"].user
+        return Likes.objects.filter(user=user, post=obj).exists()
 
     def create(self, validated_data):
         request = self.context.get("request")
+        images_data = self.context.get('view').request.FILES
+        tags = validated_data.pop('tags')
         post = Post.objects.create(owner=request.user, **validated_data)
+
+        for tag in tags:
+            post.tags.add(tag)
+
+        for image_data in images_data.values():
+            PostImage.objects.create(post=post, image=image_data)
+
         return post
+
+
+class PostDetailSerializer(serializers.ModelSerializer):
+    images = ImagePostSerializer(many=True, read_only=True)
+    owner = serializers.ReadOnlyField(source="owner.username")
+    tags = serializers.SlugRelatedField(many=True, queryset=Tags.objects.all(), slug_field="name")
+    likes = LikesSerializer(source="post_likes", many=True, read_only=True)
+    is_liked = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Post
+        fields = ("id", "text", "images", "owner", "likes", "date_posted", "tags", "is_liked")
+
+    def get_is_liked(self, obj):
+        user = self.context["request"].user
+        return Likes.objects.filter(user=user, post=obj).exists()
