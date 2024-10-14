@@ -38,6 +38,7 @@ INSTALLED_APPS = [
 
     "rest_framework",
     "debug_toolbar",
+    "rest_framework_simplejwt",
 
     "social",
     "user"
@@ -130,6 +131,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
     'DATETIME_FORMAT': '%b %d, %Y',  # returns Nov 8, 2021
 }
 
