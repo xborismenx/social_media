@@ -24,6 +24,7 @@ from social_media_api import settings
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/social/', include('social.urls')),
+    path("api/users/", include("user.urls"))
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 urlpatterns += debug_toolbar_urls()
