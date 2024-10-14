@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from social.models import Post, Likes, PostImage
+from social.models import Post, Likes, PostImage, Tags
 
 
 class ImagesPostInline(admin.TabularInline):
@@ -18,8 +18,12 @@ class LikesInline(admin.TabularInline):
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ("text",)
+    list_display = ("text", "get_tags")
     inlines = [LikesInline, ImagesPostInline]
+
+    def get_tags(self, obj):
+        return [tag.name for tag in obj.tags.all()]
 
 
 admin.site.register(Likes)
+admin.site.register(Tags)
