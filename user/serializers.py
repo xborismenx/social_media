@@ -1,14 +1,27 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
+class UserCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = ("email", "username", "password")
+        extra_kwargs = {
+            "password": {"write_only": True, "style": {"input_type": "password", "min_length": 6}},
+            "username": {"required": True},
+        }
+    def create(self, validated_data):
 
-class UserSerializer(serializers.ModelSerializer):
+        return get_user_model().objects.create_user(**validated_data)
+
+
+
+class UserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = (
-            "username",
-            "password",
             "email",
+            "password",
+            "username",
             "first_name",
             "last_name",
             "image",
@@ -31,9 +44,9 @@ class UserDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = (
-            "username",
-            "password",
             "email",
+            "password",
+            "username",
             "first_name",
             "last_name",
             "image",
@@ -45,6 +58,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
         )
         extra_kwargs = {
             "password": {"write_only": True, "required": False, "style": {"input_type": "password"}},
+            "username": {"required": False},
             "date_joined": {"read_only": True},
         }
 
@@ -58,11 +72,15 @@ class UserDetailSerializer(serializers.ModelSerializer):
         if password:
             user.set_password(password)
 
+        instance.username = validated_data.get("username", instance.username)
         instance.first_name = validated_data.get('first_name', instance.first_name)
         instance.last_name = validated_data.get('last_name', instance.last_name)
         instance.email = validated_data.get('email', instance.email)
-        instance.username = validated_data.get('username', instance.username)
-
+        instance.image = validated_data.get('image', instance.image)
+        instance.city = validated_data.get('city', instance.city)
+        instance.country = validated_data.get('country', instance.country)
+        instance.birth_date = validated_data.get('birth_date', instance.birth_date)
+        instance.bio = validated_data.get('bio', instance.bio)
         instance.save()
 
         return instance
