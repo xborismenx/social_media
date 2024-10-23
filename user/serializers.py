@@ -1,6 +1,9 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
+from user.models import Follow
+
+
 class UserCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
@@ -9,16 +12,19 @@ class UserCreateSerializer(serializers.ModelSerializer):
             "password": {"write_only": True, "style": {"input_type": "password", "min_length": 6}},
             "username": {"required": True},
         }
-    def create(self, validated_data):
 
+    def create(self, validated_data):
         return get_user_model().objects.create_user(**validated_data)
 
 
-
 class UserListSerializer(serializers.ModelSerializer):
+    followers = serializers.SerializerMethodField()
+    following = serializers.SerializerMethodField()
+
     class Meta:
         model = get_user_model()
         fields = (
+            "id",
             "email",
             "password",
             "username",
@@ -28,6 +34,8 @@ class UserListSerializer(serializers.ModelSerializer):
             "city",
             "country",
             "birth_date",
+            "followers",
+            "following",
             "bio",
             "date_joined",
         )
@@ -36,14 +44,20 @@ class UserListSerializer(serializers.ModelSerializer):
             "date_joined": {"read_only": True},
         }
 
-    def create(self, validated_data):
-        return get_user_model().objects.create_user(**validated_data)
+    def get_followers(self, obj):
+        followers = Follow.objects.filter(following=obj)
+        return [follower.follower.email for follower in followers]
+
+    def get_following(self, obj):
+        followings = Follow.objects.filter(follower=obj)
+        return [following.following.email for following in followings]
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = (
+            "id",
             "email",
             "password",
             "username",
