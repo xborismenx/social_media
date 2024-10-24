@@ -1,3 +1,5 @@
+from django.utils import timezone
+
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
@@ -46,14 +48,17 @@ class UserListSerializer(serializers.ModelSerializer):
 
     def get_followers(self, obj):
         followers = Follow.objects.filter(following=obj)
-        return [follower.follower.email for follower in followers]
+        return followers.count()
 
     def get_following(self, obj):
         followings = Follow.objects.filter(follower=obj)
-        return [following.following.email for following in followings]
+        return followings.count()
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
+    followers = serializers.SerializerMethodField()
+    following = serializers.SerializerMethodField()
+
     class Meta:
         model = get_user_model()
         fields = (
@@ -67,6 +72,8 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "city",
             "country",
             "birth_date",
+            "followers",
+            "following",
             "bio",
             "date_joined",
         )
@@ -75,6 +82,19 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "username": {"required": False},
             "date_joined": {"read_only": True},
         }
+
+    def validate_birth_date(self, value):
+        if value >= timezone.now().date():
+            raise serializers.ValidationError("Birth date cannot be in the future")
+        return value
+
+    def get_followers(self, obj):
+        followers = Follow.objects.filter(following=obj)
+        return followers.count()
+
+    def get_following(self, obj):
+        followings = Follow.objects.filter(follower=obj)
+        return followings.count()
 
     def update(self, instance, validated_data):
         user = self.context['request'].user
@@ -98,3 +118,27 @@ class UserDetailSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
+
+
+class UserFollower(serializers.ModelSerializer):
+    followers = serializers.SerializerMethodField()
+
+    class Meta:
+        model = get_user_model()
+        fields = ("email", "followers",)
+
+    def get_followers(self, obj):
+        followers = Follow.objects.filter(following=obj)
+        return [follower.follower.email for follower in followers]
+
+
+class UserFollowing(serializers.ModelSerializer):
+    following = serializers.SerializerMethodField()
+
+    class Meta:
+        model = get_user_model()
+        fields = ("email", "following",)
+
+    def get_following(self, obj):
+        following = Follow.objects.filter(follower=obj)
+        return [follow.following.email for follow in following]

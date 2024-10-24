@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.shortcuts import get_object_or_404
 from user.models import Follow, User
-from user.serializers import UserListSerializer, UserDetailSerializer, UserCreateSerializer
+from user.serializers import UserListSerializer, UserDetailSerializer, UserCreateSerializer, UserFollower, UserFollowing
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -18,6 +18,34 @@ class UserViewSet(viewsets.ModelViewSet):
         elif self.action in ['retrieve', 'update', 'partial_update']:
             return UserDetailSerializer
         return UserListSerializer
+
+
+    def get_queryset(self):
+        username = self.request.query_params.get('username')
+        first_name = self.request.query_params.get('first_name')
+        last_name = self.request.query_params.get('last_name')
+        email = self.request.query_params.get('email')
+        country = self.request.query_params.get('country')
+
+        queryset = self.queryset
+
+        if username:
+            queryset = queryset.filter(username__icontains=username)
+
+        if first_name:
+            queryset = queryset.filter(first_name__icontains=first_name)
+
+        if last_name:
+            queryset = queryset.filter(last_name__icontains=last_name)
+
+        if email:
+            queryset = queryset.filter(email__icontains=email)
+
+        if country:
+            queryset = queryset.filter(country__icontains=country)
+
+
+        return queryset
 
     def get_permissions(self):
         if self.action == 'create':
@@ -34,6 +62,18 @@ class UserViewSet(viewsets.ModelViewSet):
         """returns the data of the current authenticated user"""
         user = request.user
         serializer = UserDetailSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['GET'])
+    def followers(self, request, pk=None):
+        user = get_object_or_404(User, pk=pk)
+        serializer = UserFollower(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['GET'])
+    def following(self, request, pk=None):
+        user = get_object_or_404(User, pk=pk)
+        serializer = UserFollowing(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['POST'])
