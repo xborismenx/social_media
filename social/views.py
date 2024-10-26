@@ -1,4 +1,5 @@
 from datetime import datetime
+from django.utils.timezone import make_aware
 
 from rest_framework import viewsets, status
 from rest_framework.response import Response
@@ -35,12 +36,12 @@ class PostViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(tags__tag_post__id__in=tags_list)
 
         if date_lt:
-            date = datetime.strptime(date_lt, '%d.%m.%Y')
+            date = make_aware(datetime.strptime(date_lt, '%d.%m.%Y'))
             queryset = queryset.filter(date_posted__lte=date)
 
 
         if date_gt:
-            date = datetime.strptime(date_gt, '%d.%m.%Y')
+            date = make_aware(datetime.strptime(date_gt, '%d.%m.%Y'))
             queryset = queryset.filter(date_posted__gte=date)
 
         if owner:
