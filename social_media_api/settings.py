@@ -135,7 +135,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
-    'DATETIME_FORMAT': '%b %d, %Y',  # returns Nov 8, 2021
+    'DATETIME_FORMAT': '%d.%m.%Y'
 }
 
 INTERNAL_IPS = [
