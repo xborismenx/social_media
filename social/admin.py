@@ -26,4 +26,6 @@ class PostAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Likes)
-admin.site.register(Tags)
+@admin.register(Tags)
+class TagsAdmin(admin.ModelAdmin):
+    list_display = ("id","name",)
