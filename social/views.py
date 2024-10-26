@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from social.models import Post, Likes
 from social.serializers import PostListSerializer, PostDetailSerializer
+from user.models import Follow
 
 
 class PostViewSet(viewsets.ModelViewSet):
@@ -67,3 +68,22 @@ class PostViewSet(viewsets.ModelViewSet):
             like.delete()
             return Response({"status": "post unliked"}, status=status.HTTP_204_NO_CONTENT)
         return Response({"status": "post not liked"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+    @action(detail=False, methods=["get"])
+    def subscribed_posts(self, request):
+        """retrieving posts subscribed by the user"""
+        user = request.user
+        following_users = Follow.objects.filter(follower=user).values_list('following', flat=True)
+        print(following_users)
+
+        posts = Post.objects.filter(owner__in=following_users)
+        serializer = PostListSerializer(posts, many=True, context={"request": request})
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get", "post"])
+    def my_posts(self, request):
+        user = request.user
+        posts = Post.objects.filter(owner=user)
+        serializer = PostListSerializer(posts, many=True, context={"request": request})
+        return Response(serializer.data)
