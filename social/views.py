@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -14,6 +16,38 @@ class PostViewSet(viewsets.ModelViewSet):
         elif self.action == "retrieve":
             return PostDetailSerializer
         return PostListSerializer
+
+    def get_queryset(self):
+        text = self.request.query_params.get('text')
+        tags = self.request.query_params.get('tags')
+        date_lt = self.request.query_params.get('date_lt')
+        date_gt = self.request.query_params.get('date_gt')
+        owner = self.request.query_params.get('owner')
+
+        queryset  = self.queryset
+
+        if text:
+            queryset = queryset.filter(text__icontains=text)
+
+        if tags:
+            tags_list = [int(tag) for tag in tags.split(',')]
+            queryset = queryset.filter(tags__tag_post__id__in=tags_list)
+
+        if date_lt:
+            date = datetime.strptime(date_lt, '%d.%m.%Y')
+            queryset = queryset.filter(date_posted__lte=date)
+
+
+        if date_gt:
+            date = datetime.strptime(date_gt, '%d.%m.%Y')
+            queryset = queryset.filter(date_posted__gte=date)
+
+        if owner:
+            queryset = queryset.filter(owner=owner)
+
+        return queryset
+
+
 
     @action(detail=True, methods=["post"])
     def like(self, request, pk=None):
