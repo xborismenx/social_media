@@ -88,3 +88,11 @@ class PostViewSet(viewsets.ModelViewSet):
         posts = Post.objects.filter(owner=user)
         serializer = PostListSerializer(posts, many=True, context={"request": request})
         return Response(serializer.data)
+
+    @action(detail=False, methods=["GET"])
+    def liked_posts(self, request):
+        user = request.user
+        likes = Likes.objects.filter(user=user).values_list('post', flat=True)
+        posts = Post.objects.filter(id__in=likes)
+        serializer = PostListSerializer(posts, many=True, context={"request": request})
+        return Response(serializer.data)
