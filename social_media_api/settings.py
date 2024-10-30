@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "debug_toolbar",
     "rest_framework_simplejwt",
     'rest_framework_simplejwt.token_blacklist',
+    "django_celery_beat",
 
     "social",
     "user"
@@ -141,3 +142,10 @@ REST_FRAMEWORK = {
 INTERNAL_IPS = [
     "127.0.0.1",
 ]
+
+# Celery Configuration Options
+CELERY_BROKER_URL = "redis://localhost:6379"
+CELERY_RESULT_BACKEND = "redis://localhost:6379"
+CELERY_TIMEZONE = "Ukraine/Kyiv"
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
