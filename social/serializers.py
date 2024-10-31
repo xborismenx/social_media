@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from social.models import Post, Likes, PostImage, Tags
+from social.models import Post, Likes, PostImage, Tags, Comments
 
 
 class ImagePostSerializer(serializers.ModelSerializer):
@@ -56,8 +56,24 @@ class PostListSerializer(serializers.ModelSerializer):
 
         for image_data in images_data.values():
             PostImage.objects.create(post=post, image=image_data)
-
         return post
+
+
+class CommentsSerializer(serializers.ModelSerializer):
+    user = serializers.ReadOnlyField(source="user.username")
+
+    class Meta:
+        model = Comments
+        fields = ("id", "user", "comment", "date_posted")
+
+
+class CommentsCreateSerializer(serializers.ModelSerializer):
+    user = serializers.ReadOnlyField(source="user.username")
+    comment = serializers.CharField()
+
+    class Meta:
+        model = Comments
+        fields = ("id", "user", "comment", "date_posted")
 
 
 class PostDetailSerializer(serializers.ModelSerializer):
@@ -66,10 +82,11 @@ class PostDetailSerializer(serializers.ModelSerializer):
     tags = serializers.SlugRelatedField(many=True, queryset=Tags.objects.all(), slug_field="name")
     likes = LikesSerializer(source="post_likes", many=True, read_only=True)
     is_liked = serializers.SerializerMethodField()
+    comments = CommentsSerializer(source="post_comments", many=True)
 
     class Meta:
         model = Post
-        fields = ("id", "text", "images", "owner", "likes", "date_posted", "tags", "is_liked")
+        fields = ("id", "text", "images", "owner", "likes", "date_posted", "tags", "is_liked", "comments")
 
     def get_is_liked(self, obj):
         user = self.context["request"].user

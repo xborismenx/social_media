@@ -4,8 +4,8 @@ from django.utils.timezone import make_aware
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from social.models import Post, Likes
-from social.serializers import PostListSerializer, PostDetailSerializer
+from social.models import Post, Likes, Comments
+from social.serializers import PostListSerializer, PostDetailSerializer, CommentsCreateSerializer
 from user.models import Follow
 
 
@@ -26,7 +26,7 @@ class PostViewSet(viewsets.ModelViewSet):
         date_gt = self.request.query_params.get('date_gt')
         owner = self.request.query_params.get('owner')
 
-        queryset  = self.queryset
+        queryset = self.queryset
 
         if text:
             queryset = queryset.filter(text__icontains=text)
@@ -39,7 +39,6 @@ class PostViewSet(viewsets.ModelViewSet):
             date = make_aware(datetime.strptime(date_lt, '%d.%m.%Y'))
             queryset = queryset.filter(date_posted__lte=date)
 
-
         if date_gt:
             date = make_aware(datetime.strptime(date_gt, '%d.%m.%Y'))
             queryset = queryset.filter(date_posted__gte=date)
@@ -48,8 +47,6 @@ class PostViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(owner=owner)
 
         return queryset
-
-
 
     @action(detail=True, methods=["post"])
     def like(self, request, pk=None):
@@ -70,14 +67,11 @@ class PostViewSet(viewsets.ModelViewSet):
             return Response({"status": "post unliked"}, status=status.HTTP_204_NO_CONTENT)
         return Response({"status": "post not liked"}, status=status.HTTP_400_BAD_REQUEST)
 
-
     @action(detail=False, methods=["get"])
     def subscribed_posts(self, request):
         """retrieving posts subscribed by the user"""
         user = request.user
         following_users = Follow.objects.filter(follower=user).values_list('following', flat=True)
-        print(following_users)
-
         posts = Post.objects.filter(owner__in=following_users)
         serializer = PostListSerializer(posts, many=True, context={"request": request})
         return Response(serializer.data)
@@ -96,3 +90,21 @@ class PostViewSet(viewsets.ModelViewSet):
         posts = Post.objects.filter(id__in=likes)
         serializer = PostListSerializer(posts, many=True, context={"request": request})
         return Response(serializer.data)
+
+    @action(detail=True, methods=["POST"])
+    def comment(self, request, pk=None):
+        user = request.user
+        if user.is_anonymous:
+            return Response({"detail": "Authentication is required to comment."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        post = self.get_object()
+        comment_text = request.data.get("comment")
+
+        if not comment_text:
+            return Response({"detail": "Comment text is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        comment = Comments.objects.create(user=user, post=post, comment=comment_text)
+
+        serializer = CommentsCreateSerializer(comment, context={'request': request})
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

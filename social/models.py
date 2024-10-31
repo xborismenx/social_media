@@ -41,3 +41,9 @@ class Likes(models.Model):
 
     class Meta:
         unique_together = (('user', 'post'),)
+
+class Comments(models.Model):
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='user_comments')
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='post_comments')
+    comment = models.TextField(max_length=500)
+    date_posted = models.DateTimeField(auto_now_add=True)
