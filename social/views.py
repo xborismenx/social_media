@@ -1,7 +1,10 @@
 from datetime import datetime
+
+from django.utils import timezone
 from django.utils.timezone import make_aware
 
 from rest_framework import viewsets, status
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from social.models import Post, Likes, Comments
@@ -19,6 +22,13 @@ class PostViewSet(viewsets.ModelViewSet):
             return PostDetailSerializer
         return PostListSerializer
 
+    def get_permissions(self):
+        if self.action == "list":
+            return [AllowAny()]
+        if self.action in ["create", "retrieve", "update", "partial_update"]:
+            return [IsAuthenticated()]
+        return [IsAuthenticated()]
+
     def get_queryset(self):
         text = self.request.query_params.get('text')
         tags = self.request.query_params.get('tags')
@@ -27,6 +37,7 @@ class PostViewSet(viewsets.ModelViewSet):
         owner = self.request.query_params.get('owner')
 
         queryset = self.queryset
+        queryset = queryset.filter(date_posted__lte=timezone.now())
 
         if text:
             queryset = queryset.filter(text__icontains=text)
@@ -48,7 +59,7 @@ class PostViewSet(viewsets.ModelViewSet):
 
         return queryset
 
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated()])
     def like(self, request, pk=None):
         post = self.get_object()
         user = request.user
@@ -57,7 +68,7 @@ class PostViewSet(viewsets.ModelViewSet):
             return Response({"status": "post liked"}, status=status.HTTP_201_CREATED)
         return Response({"status": "post already liked"}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated()])
     def unlike(self, request, pk=None):
         post = self.get_object()
         user = request.user
@@ -67,7 +78,7 @@ class PostViewSet(viewsets.ModelViewSet):
             return Response({"status": "post unliked"}, status=status.HTTP_204_NO_CONTENT)
         return Response({"status": "post not liked"}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=False, methods=["get"])
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated()])
     def subscribed_posts(self, request):
         """retrieving posts subscribed by the user"""
         user = request.user
@@ -76,14 +87,14 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer = PostListSerializer(posts, many=True, context={"request": request})
         return Response(serializer.data)
 
-    @action(detail=False, methods=["get", "post"])
+    @action(detail=False, methods=["get", "post"], permission_classes=[IsAuthenticated()])
     def my_posts(self, request):
         user = request.user
         posts = Post.objects.filter(owner=user)
         serializer = PostListSerializer(posts, many=True, context={"request": request})
         return Response(serializer.data)
 
-    @action(detail=False, methods=["GET"])
+    @action(detail=False, methods=["GET"], permission_classes=[IsAuthenticated()])
     def liked_posts(self, request):
         user = request.user
         likes = Likes.objects.filter(user=user).values_list('post', flat=True)
@@ -91,12 +102,9 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer = PostListSerializer(posts, many=True, context={"request": request})
         return Response(serializer.data)
 
-    @action(detail=True, methods=["POST"])
+    @action(detail=True, methods=["POST"], permission_classes=[IsAuthenticated()])
     def comment(self, request, pk=None):
         user = request.user
-        if user.is_anonymous:
-            return Response({"detail": "Authentication is required to comment."}, status=status.HTTP_401_UNAUTHORIZED)
-
         post = self.get_object()
         comment_text = request.data.get("comment")
 
@@ -106,5 +114,4 @@ class PostViewSet(viewsets.ModelViewSet):
         comment = Comments.objects.create(user=user, post=post, comment=comment_text)
 
         serializer = CommentsCreateSerializer(comment, context={'request': request})
-
         return Response(serializer.data, status=status.HTTP_201_CREATED)
