@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.shortcuts import get_object_or_404
@@ -49,7 +49,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action == 'create':
-            return []
+            return [AllowAny()]
         return [IsAuthenticated()]
 
     def get_authentication_classes(self):
@@ -57,26 +57,26 @@ class UserViewSet(viewsets.ModelViewSet):
             return []
         return [JWTAuthentication]
 
-    @action(detail=False, methods=['GET', "POST"], url_path='me')
+    @action(detail=False, methods=['GET', "POST"], permission_classes=[IsAuthenticated()])
     def me(self, request):
         """returns the data of the current authenticated user"""
         user = request.user
         serializer = UserDetailSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['GET'])
+    @action(detail=True, methods=['GET'], permission_classes=[IsAuthenticated()])
     def followers(self, request, pk=None):
         user = get_object_or_404(User, pk=pk)
         serializer = UserFollower(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['GET'])
+    @action(detail=True, methods=['GET'], permission_classes=[IsAuthenticated()])
     def following(self, request, pk=None):
         user = get_object_or_404(User, pk=pk)
         serializer = UserFollowing(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['POST'])
+    @action(detail=True, methods=['POST'], permission_classes=[IsAuthenticated()])
     def follow(self, request, pk=None):
         user_to_follow = get_object_or_404(User, pk=pk)
         current_user = request.user
@@ -91,7 +91,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response({"success": f"You are now following {user_to_follow.username}."},
                         status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=['POST'])
+    @action(detail=True, methods=['POST'], permission_classes=[IsAuthenticated()])
     def unfollow(self, request, pk=None):
         user_to_unfollow = get_object_or_404(User, pk=pk)
         current_user = request.user
