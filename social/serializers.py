@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import serializers
 
 from social.models import Post, Likes, PostImage, Tags, Comments
@@ -29,10 +30,11 @@ class PostListSerializer(serializers.ModelSerializer):
     likes = serializers.SerializerMethodField(source="likes")
     tags = serializers.SlugRelatedField(many=True, queryset=Tags.objects.all(), slug_field="name")
     is_liked = serializers.SerializerMethodField()
-
+    date_posted = serializers.DateTimeField(read_only=True)
+    scheduled_time = serializers.DateTimeField(write_only=True, required=False)
     class Meta:
         model = Post
-        fields = ("id", "text", "images", "likes", "tags", "date_posted", "owner", "is_liked")
+        fields = ("id", "text", "images", "likes", "tags", "date_posted", "owner", "is_liked", "scheduled_time")
 
     def get_images(self, obj):
         request = self.context.get("request")
@@ -43,13 +45,20 @@ class PostListSerializer(serializers.ModelSerializer):
 
     def get_is_liked(self, obj):
         user = self.context["request"].user
-        return Likes.objects.filter(user=user, post=obj).exists()
+        if user.is_authenticated:
+            return Likes.objects.filter(user=user, post=obj).exists()
+        return False
 
     def create(self, validated_data):
         request = self.context.get("request")
         images_data = self.context.get('view').request.FILES
         tags = validated_data.pop('tags')
-        post = Post.objects.create(owner=request.user, **validated_data)
+        scheduled_time = validated_data.pop('scheduled_time', None)
+
+        if not scheduled_time:
+            validated_data["date_posted"] = timezone.now()
+
+        post = Post.objects.create(owner=request.user, scheduled_time=scheduled_time, **validated_data)
 
         for tag in tags:
             post.tags.add(tag)
