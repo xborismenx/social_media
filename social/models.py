@@ -1,5 +1,6 @@
 import os
 import uuid
+from django.utils import timezone
 
 from django.contrib.auth import get_user_model
 from django.db import models
@@ -30,9 +31,12 @@ class Tags(models.Model):
 class Post(models.Model):
     text = models.TextField(max_length=500)
     owner = models.ForeignKey(get_user_model(), models.CASCADE, related_name="owner_post")
-    date_posted = models.DateTimeField(auto_now_add=True)
+    date_posted = models.DateTimeField(null=True)
     tags = models.ManyToManyField(Tags, related_name="tag_post")
+    scheduled_time = models.DateTimeField(null=True)
 
+    def is_published(self):
+        return self.date_posted is not None and self.date_posted < timezone.now()
 
 class Likes(models.Model):
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='user_likes')
