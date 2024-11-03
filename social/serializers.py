@@ -29,12 +29,13 @@ class PostListSerializer(serializers.ModelSerializer):
     owner = serializers.ReadOnlyField(source="owner.username")
     likes = serializers.SerializerMethodField(source="likes")
     tags = serializers.SlugRelatedField(many=True, queryset=Tags.objects.all(), slug_field="name")
-    is_liked = serializers.SerializerMethodField()
+    is_liked = serializers.BooleanField(read_only=True)
     date_posted = serializers.DateTimeField(read_only=True)
     scheduled_time = serializers.DateTimeField(write_only=True, required=False)
+
     class Meta:
         model = Post
-        fields = ("id", "text", "images", "likes", "tags", "date_posted", "owner", "is_liked", "scheduled_time")
+        fields = ("id", "text", "images", "likes", "tags", "is_liked", "date_posted", "owner", "scheduled_time")
 
     def get_images(self, obj):
         request = self.context.get("request")
@@ -42,12 +43,6 @@ class PostListSerializer(serializers.ModelSerializer):
 
     def get_likes(self, obj):
         return obj.post_likes.count()
-
-    def get_is_liked(self, obj):
-        user = self.context["request"].user
-        if user.is_authenticated:
-            return Likes.objects.filter(user=user, post=obj).exists()
-        return False
 
     def create(self, validated_data):
         request = self.context.get("request")
@@ -90,13 +85,9 @@ class PostDetailSerializer(serializers.ModelSerializer):
     owner = serializers.ReadOnlyField(source="owner.username")
     tags = serializers.SlugRelatedField(many=True, queryset=Tags.objects.all(), slug_field="name")
     likes = LikesSerializer(source="post_likes", many=True, read_only=True)
-    is_liked = serializers.SerializerMethodField()
+    is_liked = serializers.BooleanField()
     comments = CommentsSerializer(source="post_comments", many=True)
 
     class Meta:
         model = Post
         fields = ("id", "text", "images", "owner", "likes", "date_posted", "tags", "is_liked", "comments")
-
-    def get_is_liked(self, obj):
-        user = self.context["request"].user
-        return Likes.objects.filter(user=user, post=obj).exists()
