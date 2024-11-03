@@ -2,6 +2,7 @@ from datetime import datetime
 
 from django.utils import timezone
 from django.utils.timezone import make_aware
+from drf_spectacular.utils import extend_schema
 
 from rest_framework import viewsets, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -59,6 +60,14 @@ class PostViewSet(viewsets.ModelViewSet):
 
         return queryset
 
+    @extend_schema(
+        description="Like a post. If the post is already liked by the user, returns a 400 status.",
+        request=None,
+        responses={
+            201: {"status": "post liked"},
+            400: {"status": "post already liked"}
+        }
+    )
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated()])
     def like(self, request, pk=None):
         post = self.get_object()
@@ -68,6 +77,14 @@ class PostViewSet(viewsets.ModelViewSet):
             return Response({"status": "post liked"}, status=status.HTTP_201_CREATED)
         return Response({"status": "post already liked"}, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        description="Dislike a post. If the post is already liked by the user, returns a 400 status.",
+        request=None,
+        responses={
+            204: None,
+            400: {"status": "post not liked"}
+        }
+    )
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated()])
     def unlike(self, request, pk=None):
         post = self.get_object()
@@ -78,6 +95,12 @@ class PostViewSet(viewsets.ModelViewSet):
             return Response({"status": "post unliked"}, status=status.HTTP_204_NO_CONTENT)
         return Response({"status": "post not liked"}, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        description="retrieving users posts subscribed by the user",
+        responses={
+            status.HTTP_200_OK: PostListSerializer,
+        }
+    )
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated()])
     def subscribed_posts(self, request):
         """retrieving posts subscribed by the user"""
@@ -87,6 +110,12 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer = PostListSerializer(posts, many=True, context={"request": request})
         return Response(serializer.data)
 
+    @extend_schema(
+        description="retrieving posts created by user",
+        responses={
+            status.HTTP_200_OK: PostListSerializer,
+        }
+    )
     @action(detail=False, methods=["get", "post"], permission_classes=[IsAuthenticated()])
     def my_posts(self, request):
         user = request.user
@@ -94,6 +123,12 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer = PostListSerializer(posts, many=True, context={"request": request})
         return Response(serializer.data)
 
+    @extend_schema(
+        description="retrieving posts what liked by user",
+        responses={
+            status.HTTP_200_OK: PostDetailSerializer,
+        }
+    )
     @action(detail=False, methods=["GET"], permission_classes=[IsAuthenticated()])
     def liked_posts(self, request):
         user = request.user
@@ -102,6 +137,13 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer = PostListSerializer(posts, many=True, context={"request": request})
         return Response(serializer.data)
 
+    @extend_schema(
+        request=CommentsCreateSerializer,
+        responses={
+            status.HTTP_201_CREATED: CommentsCreateSerializer,
+            status.HTTP_400_BAD_REQUEST: {'description': 'Comment text is required.'}
+        },
+    )
     @action(detail=True, methods=["POST"], permission_classes=[IsAuthenticated()])
     def comment(self, request, pk=None):
         user = request.user
