@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from django.db.models import Prefetch, OuterRef, Exists
 from django.utils import timezone
 from django.utils.timezone import make_aware
 from drf_spectacular.utils import extend_schema
@@ -31,13 +32,29 @@ class PostViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated()]
 
     def get_queryset(self):
+        user = self.request.user
+        likes_subquery = Likes.objects.filter(
+            post=OuterRef("pk"),
+            user=user
+        )
+        queryset = Post.objects.select_related("owner").prefetch_related(
+            Prefetch("images"),
+            Prefetch("tags"),
+            Prefetch("post_likes"),
+            Prefetch("post_comments"),
+        ).annotate(
+            is_liked=Exists(likes_subquery)
+        )
+
+        if self.action == "retrieve":
+            queryset = queryset.prefetch_related("post_comments__user")
+
         text = self.request.query_params.get('text')
         tags = self.request.query_params.get('tags')
         date_lt = self.request.query_params.get('date_lt')
         date_gt = self.request.query_params.get('date_gt')
         owner = self.request.query_params.get('owner')
 
-        queryset = self.queryset
         queryset = queryset.filter(date_posted__lte=timezone.now())
 
         if text:
@@ -92,7 +109,7 @@ class PostViewSet(viewsets.ModelViewSet):
         like = Likes.objects.filter(user=user, post=post)
         if like.exists():
             like.delete()
-            return Response({"status": "post unliked"}, status=status.HTTP_204_NO_CONTENT)
+            return Response(status=status.HTTP_204_NO_CONTENT)
         return Response({"status": "post not liked"}, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
@@ -104,9 +121,10 @@ class PostViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated()])
     def subscribed_posts(self, request):
         """retrieving posts subscribed by the user"""
+        queryset = self.get_queryset()
         user = request.user
         following_users = Follow.objects.filter(follower=user).values_list('following', flat=True)
-        posts = Post.objects.filter(owner__in=following_users)
+        posts = queryset.filter(owner__in=following_users)
         serializer = PostListSerializer(posts, many=True, context={"request": request})
         return Response(serializer.data)
 
@@ -118,8 +136,9 @@ class PostViewSet(viewsets.ModelViewSet):
     )
     @action(detail=False, methods=["get", "post"], permission_classes=[IsAuthenticated()])
     def my_posts(self, request):
+        queryset = self.get_queryset()
         user = request.user
-        posts = Post.objects.filter(owner=user)
+        posts = queryset.filter(owner=user)
         serializer = PostListSerializer(posts, many=True, context={"request": request})
         return Response(serializer.data)
 
@@ -131,9 +150,10 @@ class PostViewSet(viewsets.ModelViewSet):
     )
     @action(detail=False, methods=["GET"], permission_classes=[IsAuthenticated()])
     def liked_posts(self, request):
+        queryset = self.get_queryset()
         user = request.user
         likes = Likes.objects.filter(user=user).values_list('post', flat=True)
-        posts = Post.objects.filter(id__in=likes)
+        posts = queryset.filter(id__in=likes)
         serializer = PostListSerializer(posts, many=True, context={"request": request})
         return Response(serializer.data)
 
