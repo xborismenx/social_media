@@ -33,7 +33,7 @@ class Post(models.Model):
     owner = models.ForeignKey(get_user_model(), models.CASCADE, related_name="owner_post")
     date_posted = models.DateTimeField(null=True)
     tags = models.ManyToManyField(Tags, related_name="tag_post")
-    scheduled_time = models.DateTimeField(null=True)
+    scheduled_time = models.DateTimeField(null=True, blank=True)
 
     def is_published(self):
         return self.date_posted is not None and self.date_posted < timezone.now()
