@@ -1,4 +1,7 @@
 from django.contrib.auth import get_user_model
+from django.db.models import Count, Prefetch
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -19,15 +22,19 @@ class UserViewSet(viewsets.ModelViewSet):
             return UserDetailSerializer
         return UserListSerializer
 
-
     def get_queryset(self):
+        queryset = self.queryset
+
+        queryset = queryset.annotate(
+            followers_count=Count('followers'),
+            following_count=Count('following')
+        )
+
         username = self.request.query_params.get('username')
         first_name = self.request.query_params.get('first_name')
         last_name = self.request.query_params.get('last_name')
         email = self.request.query_params.get('email')
         country = self.request.query_params.get('country')
-
-        queryset = self.queryset
 
         if username:
             queryset = queryset.filter(username__icontains=username)
@@ -43,7 +50,6 @@ class UserViewSet(viewsets.ModelViewSet):
 
         if country:
             queryset = queryset.filter(country__icontains=country)
-
 
         return queryset
 

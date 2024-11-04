@@ -3,8 +3,6 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from user.models import Follow
-
 
 class UserCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -20,8 +18,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
 
 class UserListSerializer(serializers.ModelSerializer):
-    followers = serializers.SerializerMethodField()
-    following = serializers.SerializerMethodField()
+    followers = serializers.IntegerField(source='followers_count', read_only=True)
+    following = serializers.IntegerField(source='following_count', read_only=True)
 
     class Meta:
         model = get_user_model()
@@ -45,14 +43,6 @@ class UserListSerializer(serializers.ModelSerializer):
             "password": {"write_only": True, "style": {"input_type": "password"}},
             "date_joined": {"read_only": True},
         }
-
-    def get_followers(self, obj):
-        followers = Follow.objects.filter(following=obj)
-        return followers.count()
-
-    def get_following(self, obj):
-        followings = Follow.objects.filter(follower=obj)
-        return followings.count()
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
