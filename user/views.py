@@ -53,6 +53,38 @@ class UserViewSet(viewsets.ModelViewSet):
 
         return queryset
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "username",
+                type=OpenApiTypes.STR,
+                description="Username filter: searches for occurrences of the provided username (e.g., ?username=johndoe)."
+            ),
+            OpenApiParameter(
+                "first_name",
+                type=OpenApiTypes.STR,
+                description="First name filter: searches for occurrences of the provided first name (e.g., ?first_name=John)."
+            ),
+            OpenApiParameter(
+                "last_name",
+                type=OpenApiTypes.STR,
+                description="Last name filter: searches for occurrences of the provided last name (e.g., ?last_name=Doe)."
+            ),
+            OpenApiParameter(
+                "email",
+                type=OpenApiTypes.STR,
+                description="Email filter: searches for occurrences of the provided email address (e.g., ?email=john@example.com)."
+            ),
+            OpenApiParameter(
+                "country",
+                type=OpenApiTypes.STR,
+                description="Country filter: searches for occurrences of the provided country name (e.g., ?country=USA)."
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
     def get_permissions(self):
         if self.action == 'create':
             return [AllowAny()]
@@ -67,23 +99,42 @@ class UserViewSet(viewsets.ModelViewSet):
     def me(self, request):
         """returns the data of the current authenticated user"""
         user = request.user
-        serializer = UserDetailSerializer(user)
+        followers_prefetch = Prefetch('followers',
+                                      queryset=Follow.objects.filter(following=user).select_related('follower'))
+        following_prefetch = Prefetch('following',
+                                      queryset=Follow.objects.filter(follower=user).select_related('following'))
+
+        queryset = self.queryset.filter(pk=user.pk).prefetch_related(followers_prefetch, following_prefetch)
+        serializer = UserDetailSerializer(queryset.first())
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['GET'], permission_classes=[IsAuthenticated()])
     def followers(self, request, pk=None):
-        user = get_object_or_404(User, pk=pk)
-        serializer = UserFollower(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        """return the data of the followers of the current authenticated user"""
+        followers_prefetch = Prefetch('followers',
+                                      queryset=Follow.objects.filter(following__pk=pk).select_related('follower'))
+        queryset = self.queryset.filter(pk=pk).prefetch_related(followers_prefetch)
+        user = queryset.first()
+        if user:
+            serializer = UserFollower(user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=True, methods=['GET'], permission_classes=[IsAuthenticated()])
     def following(self, request, pk=None):
-        user = get_object_or_404(User, pk=pk)
-        serializer = UserFollowing(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        """return the data of the followings of the current authenticated user"""
+        following_prefetch = Prefetch('following',
+                                      queryset=Follow.objects.filter(follower__pk=pk).select_related('following'))
+        queryset = self.queryset.filter(pk=pk).prefetch_related(following_prefetch)
+        user = queryset.first()
+        if user:
+            serializer = UserFollowing(user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        Response(status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=True, methods=['POST'], permission_classes=[IsAuthenticated()])
     def follow(self, request, pk=None):
+        """follow user by their id"""
         user_to_follow = get_object_or_404(User, pk=pk)
         current_user = request.user
 
@@ -99,6 +150,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['POST'], permission_classes=[IsAuthenticated()])
     def unfollow(self, request, pk=None):
+        """unfollow user by their id"""
         user_to_unfollow = get_object_or_404(User, pk=pk)
         current_user = request.user
 

@@ -79,12 +79,10 @@ class UserDetailSerializer(serializers.ModelSerializer):
         return value
 
     def get_followers(self, obj):
-        followers = Follow.objects.filter(following=obj)
-        return followers.count()
+        return [f.follower.username for f in obj.followers.all()]
 
     def get_following(self, obj):
-        followings = Follow.objects.filter(follower=obj)
-        return followings.count()
+        return [f.following.username for f in obj.following.all()]
 
     def update(self, instance, validated_data):
         user = self.context['request'].user
@@ -118,8 +116,7 @@ class UserFollower(serializers.ModelSerializer):
         fields = ("email", "followers",)
 
     def get_followers(self, obj):
-        followers = Follow.objects.filter(following=obj)
-        return [follower.follower.email for follower in followers]
+        return [f.follower.email for f in obj.followers.all()]
 
 
 class UserFollowing(serializers.ModelSerializer):
@@ -130,5 +127,4 @@ class UserFollowing(serializers.ModelSerializer):
         fields = ("email", "following",)
 
     def get_following(self, obj):
-        following = Follow.objects.filter(follower=obj)
-        return [follow.following.email for follow in following]
+        return [f.following.email for f in obj.following.all()]

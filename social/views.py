@@ -3,7 +3,8 @@ from datetime import datetime
 from django.db.models import Prefetch, OuterRef, Exists
 from django.utils import timezone
 from django.utils.timezone import make_aware
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 from rest_framework import viewsets, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -76,6 +77,39 @@ class PostViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(owner=owner)
 
         return queryset
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "text",
+                type=OpenApiTypes.STR,
+                description="Text filter: searches for occurrences of the provided text in the `text` field (e.g., ?text=example)."
+            ),
+            OpenApiParameter(
+                "tags",
+                type=OpenApiTypes.STR,
+                description="Tags filter: accepts a comma-separated list of tag IDs (e.g., ?tags=1,2,3)."
+            ),
+            OpenApiParameter(
+                "date_lt",
+                type=OpenApiTypes.DATE,
+                description="Date filter (less than or equal): accepts a date in the format `YYYY-MM-DD` (e.g., ?date_lt=2023-01-01)."
+            ),
+            OpenApiParameter(
+                "date_gt",
+                type=OpenApiTypes.DATE,
+                description="Date filter (greater than or equal): accepts a date in the format `YYYY-MM-DD` (e.g., ?date_gt=2023-01-01)."
+            ),
+            OpenApiParameter(
+                "owner",
+                type=OpenApiTypes.INT,
+                description="Owner filter: accepts a user ID to filter by the owner (e.g., ?owner=1)."
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
 
     @extend_schema(
         description="Like a post. If the post is already liked by the user, returns a 400 status.",
