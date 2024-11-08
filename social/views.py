@@ -34,18 +34,20 @@ class PostViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        likes_subquery = Likes.objects.filter(
-            post=OuterRef("pk"),
-            user=user
-        )
-        queryset = Post.objects.select_related("owner").prefetch_related(
-            Prefetch("images"),
-            Prefetch("tags"),
-            Prefetch("post_likes"),
-            Prefetch("post_comments"),
-        ).annotate(
-            is_liked=Exists(likes_subquery)
-        )
+        queryset = self.queryset
+        if user.is_authenticated:
+            likes_subquery = Likes.objects.filter(
+                post=OuterRef("pk"),
+                user=user
+            )
+            queryset = Post.objects.select_related("owner").prefetch_related(
+                Prefetch("images"),
+                Prefetch("tags"),
+                Prefetch("post_likes"),
+                Prefetch("post_comments"),
+            ).annotate(
+                is_liked=Exists(likes_subquery)
+            )
 
         if self.action == "retrieve":
             queryset = queryset.prefetch_related("post_comments__user")
