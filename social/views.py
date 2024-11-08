@@ -112,7 +112,6 @@ class PostViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-
     @extend_schema(
         description="Like a post. If the post is already liked by the user, returns a 400 status.",
         request=None,
@@ -156,7 +155,7 @@ class PostViewSet(viewsets.ModelViewSet):
     )
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated()])
     def subscribed_posts(self, request):
-        """retrieving posts subscribed by the user"""
+        """retrieving users posts subscribed by the user"""
         queryset = self.get_queryset()
         user = request.user
         following_users = Follow.objects.filter(follower=user).values_list('following', flat=True)
