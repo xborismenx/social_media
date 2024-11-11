@@ -74,7 +74,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
         }
 
     def validate_birth_date(self, value):
-        if value >= timezone.now().date():
+        if value is not None and value >= timezone.now().date():
             raise serializers.ValidationError("Birth date cannot be in the future")
         return value
 
