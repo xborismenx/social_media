@@ -1,13 +1,16 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Prefetch
+from django.shortcuts import get_object_or_404
+
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from django.shortcuts import get_object_or_404
+
 from user.models import Follow, User
 from user.serializers import UserListSerializer, UserDetailSerializer, UserCreateSerializer, UserFollower, UserFollowing
 
