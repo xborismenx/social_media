@@ -7,11 +7,13 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from social.models import Tags, Post, Likes
 from social.serializers import PostDetailSerializer
+
 from user.models import Follow
 
 POST_URL = reverse("social:posts-list")
