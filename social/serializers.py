@@ -44,10 +44,20 @@ class PostListSerializer(serializers.ModelSerializer):
     def get_likes(self, obj):
         return obj.post_likes.count()
 
+
+class PostCreateSerializer(serializers.ModelSerializer):
+    tags = serializers.SlugRelatedField(many=True, queryset=Tags.objects.all(), slug_field="name")
+    images = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
+    scheduled_time = serializers.DateTimeField(write_only=True, required=False)
+
+    class Meta:
+        model = Post
+        fields = ("text", "tags", "images", "scheduled_time")
+
     def create(self, validated_data):
         request = self.context.get("request")
-        images_data = self.context.get('view').request.FILES
-        tags = validated_data.pop('tags')
+        images_data = validated_data.pop('images', [])
+        tags = validated_data.pop('tags', [])
         scheduled_time = validated_data.pop('scheduled_time', None)
 
         if not scheduled_time:
@@ -55,11 +65,11 @@ class PostListSerializer(serializers.ModelSerializer):
 
         post = Post.objects.create(owner=request.user, scheduled_time=scheduled_time, **validated_data)
 
-        for tag in tags:
-            post.tags.add(tag)
+        post.tags.set(tags)
 
-        for image_data in images_data.values():
+        for image_data in images_data:
             PostImage.objects.create(post=post, image=image_data)
+
         return post
 
 
