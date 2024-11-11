@@ -11,7 +11,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from social.models import Post, Likes, Comments
-from social.serializers import PostListSerializer, PostDetailSerializer, CommentsCreateSerializer
+from social.serializers import PostListSerializer, PostDetailSerializer, CommentsCreateSerializer, PostCreateSerializer
 from user.models import Follow
 
 
@@ -21,6 +21,8 @@ class PostViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == "list":
             return PostListSerializer
+        elif self.action == "create":
+            return PostCreateSerializer
         elif self.action == "retrieve":
             return PostDetailSerializer
         return PostListSerializer
@@ -169,13 +171,21 @@ class PostViewSet(viewsets.ModelViewSet):
             status.HTTP_200_OK: PostListSerializer,
         }
     )
-    @action(detail=False, methods=["get", "post"], permission_classes=[IsAuthenticated()])
+    @action(detail=False, methods=["GET", "POST"], permission_classes=[IsAuthenticated()])
     def my_posts(self, request):
-        queryset = self.get_queryset()
         user = request.user
-        posts = queryset.filter(owner=user)
-        serializer = PostListSerializer(posts, many=True, context={"request": request})
-        return Response(serializer.data)
+
+        if request.method == "GET":
+            posts = self.get_queryset().filter(owner=user)
+            serializer = PostListSerializer(posts, many=True, context={"request": request})
+            return Response(serializer.data)
+
+        elif request.method == "POST":
+            serializer = PostCreateSerializer(data=request.data, context={"request": request})
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
         description="retrieving posts what liked by user",
